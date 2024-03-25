@@ -10,7 +10,7 @@ from Model import Model
 
 if __name__ == '__main__':
 
-    with open("/content/data.json") as f:
+    with open("/content/Program_Synthesizer/data_manimML.json") as f:
         train_data = json.load(f)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
