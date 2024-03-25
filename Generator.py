@@ -71,24 +71,6 @@ class FeedForwad(nn.Module):
         x = self.linear3(x)
         return x
 
-class GeneratorBodyLayer(nn.Module):
-    def __init__(self, d_model=768, max_sequence_len=100):
-        super().___init__()
-        self.self_dattention = SelfAttention(d_model=d_model)
-        self.add = Add()
-        self.layernorm = LayerNorm(d_model=d_model)
-        self.feedforwad = FeedForwad(d_model=d_model, max_sequence_len=max_sequence_len)
-    
-    def forward(self, input_embed, condition_embed):
-        x_temp = self.self_dattention.forward(key=input_embed, queries=input_embed, values=input_embed)
-        x = self.add.forward(input_embed=x, condition_embed=condition_embed, result=x_temp)
-        x = self.layernorm.forward(x)
-
-        x_temp = self.feedforwad.forward(x)
-        x = self.add.forward(input_embed=x, condition_embed=condition_embed, result=x_temp)
-        x = self.layernorm.forward(x)
-        return x
-
 class PositionalEncoder(nn.Module):
     def __init__(self, d_model, max_sequence_len):
         super().__init__()
@@ -109,6 +91,24 @@ class PositionalEncoder(nn.Module):
 
         return self.encoding[:seq_len, :]
 
+class GeneratorBodyLayer(nn.Module):
+    def __init__(self, d_model=768, max_sequence_len=100):
+        super().___init__()
+        self.self_dattention = SelfAttention(d_model=d_model)
+        self.add = Add()
+        self.layernorm = LayerNorm(d_model=d_model)
+        self.feedforwad = FeedForwad(d_model=d_model, max_sequence_len=max_sequence_len)
+    
+    def forward(self, input_embed, condition_embed):
+        x_temp = self.self_dattention.forward(key=condition_embed, queries=input_embed, values=condition_embed)
+        x = self.add.forward(input_embed=x, condition_embed=condition_embed, result=x_temp)
+        x = self.layernorm.forward(x)
+
+        x_temp = self.feedforwad.forward(x)
+        x = self.add.forward(input_embed=x, condition_embed=condition_embed, result=x_temp)
+        x = self.layernorm.forward(x)
+        return x
+
 class Generator(nn.Module):
     def __init__(self, d_model=768, max_sequence_len=100):
         super().__init__()
@@ -127,16 +127,16 @@ class Generator(nn.Module):
         self.layers = nn.ModuleList([GeneratorBodyLayer(d_model=d_model, 
                                                         max_sequence_len=max_sequence_len)
                                     for _ in range(5)])
-        self.linear = nn.Linear(d_model * max_sequence_len, 5)
+        self.linear = nn.Linear(d_model * max_sequence_len, 4)
         self.softmax = nn.Softmax()
     
-    def forward(self, x):
+    def forward(self, x, condition_embed):
         x_embed = self.embedding(x)
         x_pos = self.positional_encoder.forward(x=x)
         x = self.add_pos_embed.forward(pos=x_pos, inputs_embed=x_embed)
 
         for layer in self.layers:
-            x = layer.forward(x)
+            x = layer.forward(x, condition_embed)
 
         x = x.view(-1, self.d_model * self.max_sequence_len)
         x = self.linear(x)
