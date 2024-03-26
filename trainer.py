@@ -3,7 +3,7 @@ import json
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
-from torch.utils.data import Dataloader
+from torch.utils.data import DataLoader
 
 from datapreprocess import dataprocess, CustomDataset, custom_collate_func
 from Model import Model
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     optim = AdamW(model.parameters(), lr=lr)
     processed_data = dataprocess(train_data)
 
-    dataloader = Dataloader(processed_data, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_func, drop_last=True)
+    dataloader = DataLoader(processed_data, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_func, drop_last=True)
 
     for epoch in range(num_eps):
         for i, batch in enumerate(dataloader):

@@ -21,9 +21,9 @@ class SelfAttention(nn.Module):
 class Add(nn.Module):
     def __init__(self):
         super().__init__()
-        self.gamma = nn.Parameter(1)
-        self.beta = nn.Parameter(1)
-        self.alpha = nn.Parameter(1)
+        self.gamma = nn.Parameter(torch.tensor(1, dtype=torch.float32))
+        self.beta = nn.Parameter(torch.tensor(1, dtype=torch.float32))
+        self.alpha = nn.Parameter(torch.tensor(1, dtype=torch.float32))
 
     def forward(self, input_embed, condition_embed, result):
         x = self.gamma * input_embed + self.beta * condition_embed + self.alpha * result 
@@ -31,8 +31,8 @@ class Add(nn.Module):
 class Add_pos_embed(nn.Module):
     def __init__(self):
         super().__init__()
-        self.gamma = nn.Parameter(1)
-        self.beta = nn.Parameter(1)
+        self.gamma = nn.Parameter(torch.tensor(1, dtype=torch.float32))
+        self.beta = nn.Parameter(torch.tensor(1, dtype=torch.float32))
 
     def forward(self, pos, inputs_embed):
         x = self.gamma * pos + self.beta * inputs_embed 
@@ -54,10 +54,11 @@ class LayerNorm(nn.Module):
 
 class FeedForwad(nn.Module):
     def __init__(self, d_model, max_sequence_len):
-        self.linear1 = nn.Linear(d_model*max_sequence_len, d_model*max_sequence_len)
+        super().__init__()
+        self.linear1 = nn.Linear(d_model*max_sequence_len, 128)
         self.ReLU = nn.ReLU()
-        self.linear2 = nn.Linear(d_model*max_sequence_len, d_model*max_sequence_len)
-        self.linear3 = nn.Linear(d_model*max_sequence_len, d_model*max_sequence_len)
+        self.linear2 = nn.Linear(128, 128)
+        self.linear3 = nn.Linear(128, d_model*max_sequence_len)
 
         self.d_model = d_model
         self.max_sequence_len = max_sequence_len
@@ -78,7 +79,7 @@ class PositionalEncoder(nn.Module):
         self.encoding.require_grad = False
 
         pos = torch.arange(0, max_sequence_len)
-        pos = pos.float.unsqueeze(dim=1)
+        pos = pos.unsqueeze(dim=1)
 
         _2i = torch.arange(0, d_model, step=2)
 
@@ -93,7 +94,7 @@ class PositionalEncoder(nn.Module):
 
 class GeneratorBodyLayer(nn.Module):
     def __init__(self, d_model=768, max_sequence_len=100):
-        super().___init__()
+        super().__init__()
         self.self_dattention = SelfAttention(d_model=d_model)
         self.add = Add()
         self.layernorm = LayerNorm(d_model=d_model)
@@ -140,5 +141,4 @@ class Generator(nn.Module):
 
         x = x.view(-1, self.d_model * self.max_sequence_len)
         x = self.linear(x)
-        x = self.softmax(x)
         return x
