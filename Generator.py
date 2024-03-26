@@ -149,7 +149,6 @@ class Generator(nn.Module):
                                                         max_sequence_len=max_sequence_len)
                                     for _ in range(5)])
         self.linear = nn.Linear(d_model * max_sequence_len, 4)
-        self.softmax = nn.Softmax()
     
     def forward(self, x, condition_embed):
         x_embed = self.embedding(x)

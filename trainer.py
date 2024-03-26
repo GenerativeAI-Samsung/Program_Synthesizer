@@ -20,7 +20,7 @@ if __name__ == '__main__':
     lr = 5e-5
     num_eps = 5
 
-    model = Model().to(device)
+    model = Model(device=device).to(device)
     print(f"number of parameter: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     loss = nn.CrossEntropyLoss()
 
