@@ -37,7 +37,8 @@ if __name__ == '__main__':
 
     optim = AdamW(model.parameters(), lr=lr)
     processed_data = dataprocess(train_data)
-
+    processed_data = CustomDataset(processed_data) 
+    
     dataloader = DataLoader(processed_data, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_func, drop_last=True)
     print("start training")
     for epoch in range(num_eps):
