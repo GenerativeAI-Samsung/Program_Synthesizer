@@ -22,6 +22,10 @@ class Conditioner(nn.Module):
         if (freeze==True):
             for param in self.encoder.parameters():
                 param.requires_grad = False
+                
+        if (freeze==False):
+            for param in self.encoder.parameters():
+                param.requires_grad = True
     
     def forward(self, inputs):
         x = self.encoder.forward(inputs, self.device)

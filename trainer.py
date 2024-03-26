@@ -17,8 +17,12 @@ if __name__ == '__main__':
         model = Model(device=device, freeze=True).to(device)
         num_eps = 3
     if (setting=="continue"):
-        model = Model(device=device).to(device)
+        model = Model(device=device).to(device)            
         model.load_checkpoint()
+
+        for param in model.conditioner.encoder.parameters():
+            param.requires_grad = True
+
         num_eps = 5
     if (setting=="new"):
         model = Model(device=device).to(device)
