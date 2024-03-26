@@ -4,7 +4,7 @@ import torch.nn as nn
 class SelfAttention(nn.Module):
     def __init__(self, d_model):
         super().__init__()
-        self.d_model = d_model
+        self.d_model = torch.tensor(d_model)
         self.queries_linear = nn.Linear(d_model, d_model)
         self.keys_linear = nn.Linear(d_model, d_model)
         self.values_linear = nn.Linear(d_model, d_model)
@@ -15,7 +15,7 @@ class SelfAttention(nn.Module):
         keys = self.keys_linear(keys)
         values = self.values_linear(values)
 
-        x = torch.matmul(self.softmax(torch.matmul(queries, torch.transpose(keys, 0, 1))/torch.sqrt(self.d_model)), values)
+        x = torch.matmul(self.softmax(torch.matmul(queries, torch.transpose(keys, -2, -1))/torch.sqrt(self.d_model)), values)
         return x
 
 class Add(nn.Module):
@@ -27,6 +27,7 @@ class Add(nn.Module):
 
     def forward(self, input_embed, condition_embed, result):
         x = self.gamma * input_embed + self.beta * condition_embed + self.alpha * result 
+        return x
 
 class Add_pos_embed(nn.Module):
     def __init__(self):
@@ -36,6 +37,7 @@ class Add_pos_embed(nn.Module):
 
     def forward(self, pos, inputs_embed):
         x = self.gamma * pos + self.beta * inputs_embed 
+        return x
 
 class LayerNorm(nn.Module):
     def __init__(self, d_model, eps=1e-12):
@@ -70,6 +72,7 @@ class FeedForwad(nn.Module):
         x = self.linear2(x)
         x = self.ReLU(x)
         x = self.linear3(x)
+        x = x.view(-1, 16, 128)
         return x
 
 class PositionalEncoder(nn.Module):
@@ -95,11 +98,16 @@ class PositionalEncoder(nn.Module):
 class Transform_condition(nn.Module):
     def __init__(self):
         super().__init__()
-        self.layer = nn.Linear(512 * 1024, 128 * 16)
+        self.layer1 = nn.Linear(512 * 768, 128)
+        self.layer2 = nn.Linear(128, 128 * 16)
+        self.ReLU = nn.ReLU()
     
     def forward(self, condition_embed):
-        x = condition_embed.view(-1, 512 * 1024)
-        x = self.layer(x)
+        x = condition_embed.view(-1, 512 * 768)
+        x = self.layer1(x)
+        x = self.ReLU(x)
+        x = self.layer2(x)
+        x = x.view(-1, 16, 128)
         return x
 
 class GeneratorBodyLayer(nn.Module):
@@ -111,8 +119,8 @@ class GeneratorBodyLayer(nn.Module):
         self.feedforwad = FeedForwad(d_model=d_model, max_sequence_len=max_sequence_len)
     
     def forward(self, input_embed, condition_embed):
-        x_temp = self.self_dattention.forward(key=condition_embed, queries=input_embed, values=condition_embed)
-        x = self.add.forward(input_embed=x, condition_embed=condition_embed, result=x_temp)
+        x_temp = self.self_dattention.forward(keys=condition_embed, queries=input_embed, values=condition_embed)
+        x = self.add.forward(input_embed=input_embed, condition_embed=condition_embed, result=x_temp)
         x = self.layernorm.forward(x)
 
         x_temp = self.feedforwad.forward(x)

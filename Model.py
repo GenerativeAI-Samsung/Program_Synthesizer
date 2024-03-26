@@ -12,5 +12,6 @@ class Model(nn.Module):
     
     def forward(self, text, prev_func_list):
         condition_embed = self.conditioner.forward(text)
+        prev_func_list = torch.tensor(prev_func_list)
         prediction = self.generator.forward(prev_func_list, condition_embed)
         return prediction

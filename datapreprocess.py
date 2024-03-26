@@ -49,6 +49,6 @@ def custom_collate_func(batch):
 
     for sample in batch:
         text.append(sample["text"])
-        prev_func_list.append(sample["prev_func_list"])
+        prev_func_list.append(sample["prev_func_list"] + [5 for _ in range(16 - len(sample["prev_func_list"]))])
         label.append(sample["label"])
     return {"text": text, "prev_func_list": prev_func_list, "label": label}

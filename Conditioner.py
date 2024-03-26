@@ -5,8 +5,8 @@ from transformers import AutoTokenizer, AutoModel
 class Encoder(nn.Module):
     def __init__(self):
         super().__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained("bert-large-uncased")
-        self.model = AutoModel.from_pretrained("bert-large-uncased")
+        self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        self.model = AutoModel.from_pretrained("bert-base-uncased")
     
     def forward(self, inputs):
         x = self.tokenizer(inputs, return_tensors="pt", padding='max_length', max_length=512, truncation=True)
@@ -16,7 +16,7 @@ class Encoder(nn.Module):
 class Conditioner(nn.Module):
     def __init__(self):
         super().__init__()
-        self.encoder = Encoder()    # Encoder: bert-large-uncased
+        self.encoder = Encoder()    # Encoder: bert-base-uncased
     
     def forward(self, inputs):
         x = self.encoder.forward(inputs)
