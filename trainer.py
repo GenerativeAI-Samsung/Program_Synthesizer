@@ -10,17 +10,25 @@ from Model import Model
 
 if __name__ == '__main__':
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    setting = input("Chose setting (freeze/continue/new):")
+    if (setting=="freeze"):
+        model = Model(device=device, freeze=True).to(device)
+    if (setting=="continue"):
+        model = Model(device=device).to(device)
+        model.load_checkpoint()
+    if (setting=="new"):
+        model = Model(device=device).to(device)
+        
     with open("/content/Program_Synthesizer/data_manimML.json") as f:
         train_data = json.load(f)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     # Hyperparameter
-    batch_size = 2
+    batch_size = 8
     lr = 5e-5
-    num_eps = 5
+    num_eps = 10
 
-    model = Model(device=device).to(device)
     print(f"number of parameter: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     loss = nn.CrossEntropyLoss()
 
@@ -38,6 +46,7 @@ if __name__ == '__main__':
             loss_value = loss(logits.float(), label.float())
             loss_value.backward()
 
-            if (i % 10 == 0):
-                print(f"Epoch: {epoch}, Batch: {i}, loss: {loss_value}")
+            print(f"Epoch: {epoch}, Batch: {i}, loss: {loss_value}")
             optim.step()
+    print("save checkpoint")
+    model.save_checkpoint

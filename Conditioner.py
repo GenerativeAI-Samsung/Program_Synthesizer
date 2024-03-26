@@ -14,10 +14,14 @@ class Encoder(nn.Module):
         return x
 
 class Conditioner(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device, freeze=False):
         super().__init__()
         self.device = device
         self.encoder = Encoder()    # Encoder: bert-base-uncased
+        
+        if (freeze==True):
+            for param in self.encoder.parameters():
+                param.requires_grad = False
     
     def forward(self, inputs):
         x = self.encoder.forward(inputs, self.device)
