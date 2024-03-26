@@ -92,8 +92,18 @@ class PositionalEncoder(nn.Module):
 
         return self.encoding[:seq_len, :]
 
+class Transform_condition(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layer = nn.Linear(512 * 1024, 128 * 16)
+    
+    def forward(self, condition_embed):
+        x = condition_embed.view(-1, 512 * 1024)
+        x = self.layer(x)
+        return x
+
 class GeneratorBodyLayer(nn.Module):
-    def __init__(self, d_model=768, max_sequence_len=100):
+    def __init__(self, d_model=128, max_sequence_len=16):
         super().__init__()
         self.self_dattention = SelfAttention(d_model=d_model)
         self.add = Add()
@@ -111,17 +121,19 @@ class GeneratorBodyLayer(nn.Module):
         return x
 
 class Generator(nn.Module):
-    def __init__(self, d_model=768, max_sequence_len=100):
+    def __init__(self, d_model=128, max_sequence_len=16):
         super().__init__()
         self.d_model = d_model
         self.max_sequence_len = max_sequence_len
 
-        self.embedding = nn.Embedding(5, d_model)
+        self.embedding = nn.Embedding(6, d_model)
+        self.transform_condi = Transform_condition() 
         # 0 -> [START]
         # 1 -> [FEEDFORWARDLAYER]
         # 2 -> [CONVOLUTIONAL2DLAYER], 
         # 3 -> [MAXPOOLING2DLAYER]
         # 4 -> [END]
+        # 5 -> [PADDING]
         # embedding_dim: d_model
         self.positional_encoder = PositionalEncoder(d_model=d_model, max_sequence_len=max_sequence_len)
         self.add_pos_embed = Add_pos_embed()
@@ -135,6 +147,8 @@ class Generator(nn.Module):
         x_embed = self.embedding(x)
         x_pos = self.positional_encoder.forward(x=x)
         x = self.add_pos_embed.forward(pos=x_pos, inputs_embed=x_embed)
+
+        condition_embed = self.transform_condi.forward(condition_embed)
 
         for layer in self.layers:
             x = layer.forward(x, condition_embed)
