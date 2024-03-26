@@ -23,7 +23,8 @@ if __name__ == '__main__':
     if (setting=="new"):
         model = Model(device=device).to(device)
         num_eps = 10
-
+    print(f"training with setting: {setting}")
+    print(f"loading data...")
     with open("/content/Program_Synthesizer/data_manimML.json") as f:
         train_data = json.load(f)
 
@@ -38,7 +39,7 @@ if __name__ == '__main__':
     processed_data = dataprocess(train_data)
 
     dataloader = DataLoader(processed_data, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_func, drop_last=True)
-
+    print("start training")
     for epoch in range(num_eps):
         for i, batch in enumerate(dataloader):
             optim.zero_grad()
