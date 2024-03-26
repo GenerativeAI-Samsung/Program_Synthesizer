@@ -15,19 +15,21 @@ if __name__ == '__main__':
     setting = input("Chose setting (freeze/continue/new):")
     if (setting=="freeze"):
         model = Model(device=device, freeze=True).to(device)
+        num_eps = 3
     if (setting=="continue"):
         model = Model(device=device).to(device)
         model.load_checkpoint()
+        num_eps = 5
     if (setting=="new"):
         model = Model(device=device).to(device)
-        
+        num_eps = 10
+
     with open("/content/Program_Synthesizer/data_manimML.json") as f:
         train_data = json.load(f)
 
     # Hyperparameter
     batch_size = 8
     lr = 5e-5
-    num_eps = 10
 
     print(f"number of parameter: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     loss = nn.CrossEntropyLoss()
