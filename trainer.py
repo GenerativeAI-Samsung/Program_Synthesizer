@@ -53,4 +53,4 @@ if __name__ == '__main__':
             print(f"Epoch: {epoch}, Batch: {i}, loss: {loss_value}")
             optim.step()
     print("save checkpoint")
-    model.save_checkpoint
+    model.save_checkpoint()
