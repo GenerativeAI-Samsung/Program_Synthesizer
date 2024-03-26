@@ -129,8 +129,9 @@ class GeneratorBodyLayer(nn.Module):
         return x
 
 class Generator(nn.Module):
-    def __init__(self, d_model=128, max_sequence_len=16):
+    def __init__(self, device, d_model=128, max_sequence_len=16):
         super().__init__()
+        self.device = device
         self.d_model = d_model
         self.max_sequence_len = max_sequence_len
 
@@ -151,11 +152,11 @@ class Generator(nn.Module):
         self.linear = nn.Linear(d_model * max_sequence_len, 4)
     
     def forward(self, x, condition_embed):
-        x_embed = self.embedding(x)
-        x_pos = self.positional_encoder.forward(x=x)
+        x_embed = self.embedding(x).to(self.device)
+        x_pos = self.positional_encoder.forward(x=x).to(self.device)
         x = self.add_pos_embed.forward(pos=x_pos, inputs_embed=x_embed)
 
-        condition_embed = self.transform_condi.forward(condition_embed)
+        condition_embed = self.transform_condi.forward(condition_embed).to(self.device)
 
         for layer in self.layers:
             x = layer.forward(x, condition_embed)
