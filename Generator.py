@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import math
 
 class SelfAttention(nn.Module):
     def __init__(self, d_model):
@@ -17,42 +18,6 @@ class SelfAttention(nn.Module):
 
         x = torch.matmul(self.softmax(torch.matmul(queries, torch.transpose(keys, -2, -1))/torch.sqrt(self.d_model)), values)
         return x
-
-class Add(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.gamma = nn.Parameter(torch.tensor(1, dtype=torch.float32))
-        self.beta = nn.Parameter(torch.tensor(1, dtype=torch.float32))
-        self.alpha = nn.Parameter(torch.tensor(1, dtype=torch.float32))
-
-    def forward(self, input_embed, condition_embed, result):
-        x = self.gamma * input_embed + self.beta * condition_embed + self.alpha * result 
-        return x
-
-class Add_pos_embed(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.gamma = nn.Parameter(torch.tensor(1, dtype=torch.float32))
-        self.beta = nn.Parameter(torch.tensor(1, dtype=torch.float32))
-
-    def forward(self, pos, inputs_embed):
-        x = self.gamma * pos + self.beta * inputs_embed 
-        return x
-
-class LayerNorm(nn.Module):
-    def __init__(self, d_model, eps=1e-12):
-        super().__init__()
-        self.gamma = nn.Parameter(torch.ones(d_model))
-        self.beta = nn.Parameter(torch.zeros(d_model))
-        self.eps = eps
-    
-    def forward(self, x):
-        mean = x.mean(-1, keepdim=True)
-        var = x.var(-1, unbiased=False, keepdim=True)
-
-        out = (x - mean) / torch.sqrt(var + self.eps)
-        out = self.gamma * out + self.beta
-        return out
 
 class FeedForwad(nn.Module):
     def __init__(self, d_model, max_sequence_len):
@@ -75,25 +40,25 @@ class FeedForwad(nn.Module):
         x = x.view(-1, 16, 128)
         return x
 
-class PositionalEncoder(nn.Module):
-    def __init__(self, d_model, max_sequence_len):
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
         super().__init__()
-        self.encoding = torch.zeros(max_sequence_len, d_model)
-        self.encoding.require_grad = False
+        self.dropout = nn.Dropout(p=dropout)
 
-        pos = torch.arange(0, max_sequence_len)
-        pos = pos.unsqueeze(dim=1)
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(max_len, 1, d_model)
+        pe[:, 0, 0::2] = torch.sin(position * div_term)
+        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
 
-        _2i = torch.arange(0, d_model, step=2)
-
-        self.encoding[:, 0::2] = torch.sin(pos / (10000 ** (_2i / d_model)))
-        self.encoding[:, 1::2] = torch.cos(pos / (10000 ** (_2i / d_model)))
-    
-    def forward(self, x):
-
-        batch_size, seq_len = x.size()
-
-        return self.encoding[:seq_len, :]
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        Arguments:
+            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+        """
+        x = x + self.pe[:x.size(0)]
+        return self.dropout(x)
 
 class Transform_condition(nn.Module):
     def __init__(self):
@@ -114,18 +79,17 @@ class GeneratorBodyLayer(nn.Module):
     def __init__(self, d_model=128, max_sequence_len=16):
         super().__init__()
         self.self_dattention = SelfAttention(d_model=d_model)
-        self.add = Add()
-        self.layernorm = LayerNorm(d_model=d_model)
+        self.layernorm = nn.LayerNorm(d_model)
         self.feedforwad = FeedForwad(d_model=d_model, max_sequence_len=max_sequence_len)
     
     def forward(self, input_embed, condition_embed):
         x_temp = self.self_dattention.forward(keys=condition_embed, queries=input_embed, values=condition_embed)
-        x = self.add.forward(input_embed=input_embed, condition_embed=condition_embed, result=x_temp)
+        x = input_embed + condition_embed + x_temp
         x = self.layernorm.forward(x)
 
         x_temp = self.feedforwad.forward(x)
-        x = self.add.forward(input_embed=x, condition_embed=condition_embed, result=x_temp)
-        x = self.layernorm.forward(x)
+        x = x + condition_embed + x_temp
+        x = self.layernorm(x)
         return x
 
 class Generator(nn.Module):
@@ -135,17 +99,16 @@ class Generator(nn.Module):
         self.d_model = d_model
         self.max_sequence_len = max_sequence_len
 
-        self.embedding = nn.Embedding(6, d_model)
+        self.embedding = nn.Embedding(6, d_model, padding_idx=5)
         self.transform_condi = Transform_condition() 
         # 0 -> [START]
         # 1 -> [FEEDFORWARDLAYER]
         # 2 -> [CONVOLUTIONAL2DLAYER], 
         # 3 -> [MAXPOOLING2DLAYER]
         # 4 -> [END]
-        # 5 -> [PADDING]
+        # 5 -> [PAD]
         # embedding_dim: d_model
-        self.positional_encoder = PositionalEncoder(d_model=d_model, max_sequence_len=max_sequence_len)
-        self.add_pos_embed = Add_pos_embed()
+        self.positional_encoder = PositionalEncoding(d_model=d_model, max_len=max_sequence_len)
         self.layers = nn.ModuleList([GeneratorBodyLayer(d_model=d_model, 
                                                         max_sequence_len=max_sequence_len)
                                     for _ in range(5)])
@@ -154,8 +117,7 @@ class Generator(nn.Module):
     def forward(self, x, condition_embed):
         x_embed = self.embedding(x).to(self.device)
         x_pos = self.positional_encoder.forward(x=x).to(self.device)
-        x = self.add_pos_embed.forward(pos=x_pos, inputs_embed=x_embed)
-
+        x = x_pos + x_embed
         condition_embed = self.transform_condi.forward(condition_embed).to(self.device)
 
         for layer in self.layers:
