@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     setup = input("Already has checkpoint and history_file? (yes/no)")
     buf = input()
-    setting = input("Chose setting (freeze/continue/new):")
+    setting = input("Chose setting (freeze/continue):")
     if (setting=="freeze"):
         model = Model(device=device, freeze=True).to(device)
 
@@ -104,17 +104,19 @@ if __name__ == '__main__':
         mean_loss_train = train_loss/num_batch_train
 
         print(f"starting validation for epoch {epoch}...")
-        for i, batch in enumerate(val_dataloader):
-            logits = model.forward(text=batch["text"], prev_func_list=batch["prev_func_list"])
+        with torch.no_grad():
+            for i, batch in enumerate(val_dataloader):
+                optim.zero_grad()
+                logits = model.forward(text=batch["text"], prev_func_list=batch["prev_func_list"])
 
-            label = torch.tensor(batch["label"]).to(device)
-            loss_value = loss(logits.float(), label.float())
+                label = torch.tensor(batch["label"]).to(device)
+                loss_value = loss(logits.float(), label.float())
 
-            val_loss += loss_value
-            num_batch_val += 1
+                val_loss += loss_value
+                num_batch_val += 1
 
-            print(f"Epoch validation: {epoch}, step: {i}, loss: {loss_value}")
-        
+                print(f"Epoch validation: {epoch}, step: {i}, loss: {loss_value}")
+            
         mean_loss_val = val_loss/num_batch_val
 
         if (setting=="freeze"):
