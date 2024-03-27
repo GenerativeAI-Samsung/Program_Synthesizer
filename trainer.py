@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
             train_loss += loss_value
             num_batch_train += 1
-            
+
             print(f"Epoch: {epoch}, step: {i}, loss: {loss_value}")
             optim.step()
 
@@ -112,10 +112,10 @@ if __name__ == '__main__':
             train_epochs += 1
             train_losses.append(mean_loss_val)
 
-    print("save checkpoint")
+    print("saving checkpoint...")
     model.save_checkpoint()
 
-    print("save history training")
+    print("saving history training...")
     history = {"train_adapter_epochs": train_adapter_epochs, "train_adapter_losses": train_adapter_losses, "train_epochs": train_epochs, "train_losses": train_losses}
     with open("/content/drive/MyDrive/program_synthesizer/history.json", "w") as outfile:
         outfile.write(history)
