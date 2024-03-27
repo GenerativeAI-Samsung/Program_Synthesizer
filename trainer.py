@@ -13,6 +13,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     setup = input("Already has checkpoint and history_file? (yes/no)")
+    buf = input()
     setting = input("Chose setting (freeze/continue/new):")
     if (setting=="freeze"):
         model = Model(device=device, freeze=True).to(device)
@@ -45,13 +46,17 @@ if __name__ == '__main__':
         
         train_adapter_epochs = history["train_adapter_epochs"]
         train_adapter_losses = history["train_adapter_losses"]
+        val_adapter_losses = history["val_adapter_losses"]
         train_epochs = history["train_epochs"]
         train_losses = history["train_losses"]
+        val_losses = history["val_losses"]
     else:
         train_adapter_epochs = 0
         train_adapter_losses = []
+        val_adapter_losses = []
         train_epochs = 0
         train_losses = []
+        val_losses = []
 
     # Hyperparameter
     batch_size = 8
@@ -68,10 +73,14 @@ if __name__ == '__main__':
     train_data = processed_data[:training_len]
     val_data = processed_data[training_len:]
 
+    print(f"total data: {len(processed_data)}")
+    print(f"train data: {len(train_data)}")
+    print(f"validation data: {len(val_data)}")
+
     train_data = CustomDataset(train_data) 
     val_data = CustomDataset(val_data)
-    train_dataloader = DataLoader(processed_data, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_func, drop_last=True)
-    val_dataloader = DataLoader(processed_data, batch_size=1, collate_fn=custom_collate_func, drop_last=True)
+    train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=custom_collate_func, drop_last=True)
+    val_dataloader = DataLoader(val_data, batch_size=1, collate_fn=custom_collate_func, drop_last=True)
     print("start training")
     for epoch in range(num_eps):
         num_batch_train = 0
@@ -94,6 +103,7 @@ if __name__ == '__main__':
 
         mean_loss_train = train_loss/num_batch_train
 
+        print(f"starting validation for epoch {epoch}...")
         for i, batch in enumerate(val_dataloader):
             logits = model.forward(text=batch["text"], prev_func_list=batch["prev_func_list"])
 
@@ -102,20 +112,24 @@ if __name__ == '__main__':
 
             val_loss += loss_value
             num_batch_val += 1
+
+            print(f"Epoch validation: {epoch}, step: {i}, loss: {loss_value}")
         
         mean_loss_val = val_loss/num_batch_val
 
         if (setting=="freeze"):
             train_adapter_epochs += 1
-            train_adapter_losses.append(mean_loss_train)
+            train_adapter_losses.append(mean_loss_train.item())
+            val_adapter_losses.append(mean_loss_val.item())
         if (setting=="continue"):
             train_epochs += 1
-            train_losses.append(mean_loss_val)
-
+            train_losses.append(mean_loss_train.item())
+            val_losses.append(mean_loss_val.item())
     print("saving checkpoint...")
     model.save_checkpoint()
 
     print("saving history training...")
-    history = {"train_adapter_epochs": train_adapter_epochs, "train_adapter_losses": train_adapter_losses, "train_epochs": train_epochs, "train_losses": train_losses}
+    history = {"train_adapter_epochs": train_adapter_epochs, "train_adapter_losses": train_adapter_losses, "val_adapter_losses": val_adapter_losses, "train_epochs": train_epochs, "train_losses": train_losses, "val_losses": val_losses}
+    json_object = json.dumps(history)
     with open("/content/drive/MyDrive/program_synthesizer/history.json", "w") as outfile:
-        outfile.write(history)
+        outfile.write(json_object)

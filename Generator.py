@@ -52,7 +52,7 @@ class PositionalEncoding(nn.Module):
         pe[:, 0, 1::2] = torch.cos(position * div_term)
         self.register_buffer('pe', pe)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x):
         """
         Arguments:
             x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
@@ -116,8 +116,8 @@ class Generator(nn.Module):
     
     def forward(self, x, condition_embed):
         x_embed = self.embedding(x).to(self.device)
-        x_pos = self.positional_encoder.forward(x=x).to(self.device)
-        x = x_pos + x_embed
+        x = self.positional_encoder.forward(x=x_embed).to(self.device)
+        
         condition_embed = self.transform_condi.forward(condition_embed).to(self.device)
 
         for layer in self.layers:
