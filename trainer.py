@@ -115,7 +115,7 @@ if __name__ == '__main__':
                 val_loss += loss_value
                 num_batch_val += 1
 
-                print(f"Epoch validation: {epoch}, step: {i}, loss: {loss_value}")
+                print(f"Epoch validation: {epoch}, step: {i}, loss: {loss_value}, prediction: {logits}")
             
         mean_loss_val = val_loss/num_batch_val
 

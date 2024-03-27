@@ -6,26 +6,18 @@ class SelfAttention(nn.Module):
     def __init__(self, d_model):
         super().__init__()
         self.d_model = torch.tensor(d_model)
-        self.queries_linear = nn.Linear(d_model, d_model)
-        self.keys_linear = nn.Linear(d_model, d_model)
-        self.values_linear = nn.Linear(d_model, d_model)
         self.softmax = nn.Softmax()
     
     def forward(self, queries, keys, values):
-        queries = self.queries_linear(queries)
-        keys = self.keys_linear(keys)
-        values = self.values_linear(values)
-
         x = torch.matmul(self.softmax(torch.matmul(queries, torch.transpose(keys, -2, -1))/torch.sqrt(self.d_model)), values)
         return x
 
 class FeedForwad(nn.Module):
     def __init__(self, d_model, max_sequence_len):
         super().__init__()
-        self.linear1 = nn.Linear(d_model*max_sequence_len, 128)
+        self.linear1 = nn.Linear(d_model*max_sequence_len, d_model*max_sequence_len)
         self.ReLU = nn.ReLU()
-        self.linear2 = nn.Linear(128, 128)
-        self.linear3 = nn.Linear(128, d_model*max_sequence_len)
+        self.linear2 = nn.Linear(d_model*max_sequence_len, d_model*max_sequence_len)
 
         self.d_model = d_model
         self.max_sequence_len = max_sequence_len
@@ -35,8 +27,6 @@ class FeedForwad(nn.Module):
         x = self.linear1(x)
         x = self.ReLU(x)
         x = self.linear2(x)
-        x = self.ReLU(x)
-        x = self.linear3(x)
         x = x.view(-1, 16, 128)
         return x
 
@@ -63,16 +53,14 @@ class PositionalEncoding(nn.Module):
 class Transform_condition(nn.Module):
     def __init__(self):
         super().__init__()
-        self.layer1 = nn.Linear(512 * 768, 128)
-        self.layer2 = nn.Linear(128, 128 * 16)
+        self.layer1 = nn.Linear(768, 128)
+        self.layer2 = nn.Linear(768, 16)
         self.ReLU = nn.ReLU()
     
     def forward(self, condition_embed):
-        x = condition_embed.view(-1, 512 * 768)
-        x = self.layer1(x)
-        x = self.ReLU(x)
-        x = self.layer2(x)
-        x = x.view(-1, 16, 128)
+        x_1 = self.layer1(condition_embed) # -> (batch, 512, 128)
+        x_2 = self.layer2(condition_embed) # -> (batch, 512, 16)
+        x = torch.matmul(torch.transpose(x_2, 1, 2), x_1) # -> (batch, 16, 128)
         return x
 
 class GeneratorBodyLayer(nn.Module):
@@ -111,7 +99,7 @@ class Generator(nn.Module):
         self.positional_encoder = PositionalEncoding(d_model=d_model, max_len=max_sequence_len)
         self.layers = nn.ModuleList([GeneratorBodyLayer(d_model=d_model, 
                                                         max_sequence_len=max_sequence_len)
-                                    for _ in range(5)])
+                                    for _ in range(2)])
         self.linear = nn.Linear(d_model * max_sequence_len, 4)
     
     def forward(self, x, condition_embed):
