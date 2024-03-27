@@ -71,8 +71,8 @@ class GeneratorBodyLayer(nn.Module):
         self.feedforwad = FeedForwad(d_model=d_model, max_sequence_len=max_sequence_len)
     
     def forward(self, input_embed, condition_embed):
-        x_temp = self.self_dattention.forward(keys=condition_embed, queries=input_embed, values=condition_embed)
-        x = input_embed + condition_embed + x_temp
+        x_temp = self.self_dattention.forward(keys=input_embed, queries=input_embed, values=input_embed)
+        x = input_embed + x_temp
         x = self.layernorm.forward(x)
 
         x_temp = self.feedforwad.forward(x)
@@ -99,7 +99,7 @@ class Generator(nn.Module):
         self.positional_encoder = PositionalEncoding(d_model=d_model, max_len=max_sequence_len)
         self.layers = nn.ModuleList([GeneratorBodyLayer(d_model=d_model, 
                                                         max_sequence_len=max_sequence_len)
-                                    for _ in range(2)])
+                                    for _ in range(5)])
         self.linear = nn.Linear(d_model * max_sequence_len, 4)
     
     def forward(self, x, condition_embed):
