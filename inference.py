@@ -4,6 +4,7 @@ from Model import Model
 if __name__ == '__main__':
 
     device_name = input("What device do you have? (cpu/gpu): ")
+    buf = input()
     text = input("Text input: ")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
