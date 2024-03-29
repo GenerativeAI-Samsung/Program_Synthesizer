@@ -17,10 +17,10 @@ if __name__ == '__main__':
     last_value = 0
     print("running...")
     with torch.no_grad():
-        while (last_value != 4):
+        while ((last_value + 1) != 4):
             prev_func_list = torch.tensor(prediction_list + [5 for _ in range(16 - len(prediction_list))]).unsqueeze(0).to(device)
             prediction = model.forward(text=text, prev_func_list=prev_func_list)
-            last_value = torch.argmax(prediction)
+            last_value = torch.argmax(prediction).item()
             prediction_list.append(last_value + 1)
     print("finishing...")
     for i, func in enumerate(prediction_list):
