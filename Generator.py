@@ -6,7 +6,7 @@ class SelfAttention(nn.Module):
     def __init__(self, d_model):
         super().__init__()
         self.d_model = torch.tensor(d_model)
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=-1)
     
     def forward(self, queries, keys, values):
         x = torch.matmul(self.softmax(torch.matmul(queries, torch.transpose(keys, -2, -1))/torch.sqrt(self.d_model)), values)
@@ -76,7 +76,7 @@ class GeneratorBodyLayer(nn.Module):
         x = self.layernorm.forward(x)
 
         x_temp = self.feedforwad.forward(x)
-        x = x + condition_embed + x_temp
+        x = x + x_temp
         x = self.layernorm(x)
         return x
 
@@ -111,6 +111,7 @@ class Generator(nn.Module):
         for layer in self.layers:
             x = layer.forward(x, condition_embed)
 
+        x = x + condition_embed
         x = x.view(-1, self.d_model * self.max_sequence_len)
         x = self.linear(x)
         return x

@@ -3,22 +3,25 @@ from Model import Model
 
 if __name__ == '__main__':
 
-    text = input("text: ")
+    device_name = input("What device do you have? (cpu/gpu): ")
+    text = input("Text input: ")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = Model(device=device).to(device)
+    print("loading checkpoint...")
     model.load_checkpoint()
-
+    print("done!")
     prediction_list = [0] # 0 -> [START]
     last_value = 0
-
-    while (last_value != 4):
-        prev_func_list = torch.tensor(prediction_list + [5 for _ in range(16 - len(prediction_list))]).unsqueeze(0).to(device)
-        prediction = model.forward(text=text, prev_func_list=prev_func_list)
-        last_value = torch.argmax(prediction)
-        prediction_list.append(last_value + 1)
-    
+    print("running...")
+    with torch.no_grad():
+        while (last_value != 4):
+            prev_func_list = torch.tensor(prediction_list + [5 for _ in range(16 - len(prediction_list))]).unsqueeze(0).to(device)
+            prediction = model.forward(text=text, prev_func_list=prev_func_list)
+            last_value = torch.argmax(prediction)
+            prediction_list.append(last_value + 1)
+    print("finishing...")
     for i, func in enumerate(prediction_list):
         if (func==0):
             print(f"{i}: [START]")
