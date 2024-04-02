@@ -36,8 +36,10 @@ if __name__ == '__main__':
         num_eps = 5
     print(f"training with setting: {setting}")
     print(f"loading data...")
-    with open("/content/Program_Synthesizer/data_manimML.json") as f:
-        data = json.load(f)
+    with open("/content/Program_Synthesizer/train.json") as f:
+        train_data = json.load(f)
+    with open("/content/Program_Synthesizer/val.json") as f:
+        val_data = json.load(f)
 
     print(f"loading history file...")
     if (setup=="yes"):
@@ -66,14 +68,12 @@ if __name__ == '__main__':
     loss = nn.CrossEntropyLoss()
 
     optim = AdamW(model.parameters(), lr=lr)
-    processed_data = dataprocess(data)
+    train_data = dataprocess(train_data)
+    val_data = dataprocess(val_data)
 
-    training_len = round(len(processed_data) * 0.9)
+    total_data = round(len(val_data) + len(train_data))
 
-    train_data = processed_data[:training_len]
-    val_data = processed_data[training_len:]
-
-    print(f"total data: {len(processed_data)}")
+    print(f"total data: {total_data}")
     print(f"train data: {len(train_data)}")
     print(f"validation data: {len(val_data)}")
 
